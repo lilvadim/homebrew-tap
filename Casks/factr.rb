@@ -10,7 +10,7 @@ cask "factr" do
   desc "Two-factor authenticator"
   homepage "https://github.com/lilvadim/factr"
 
-  depends_on macos: ">= :big_sur"
+  depends_on macos: :big_sur
 
   app "Factr.app"
 end
