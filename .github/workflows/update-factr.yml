@@ -76,7 +76,7 @@ jobs:
       - name: Create Update Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
-          branch: codex/update-factr-cask
+          branch: automated/factr-cask-update
           base: ${{ github.event.repository.default_branch }}
           add-paths: Casks/factr.rb
           commit-message: Update Factr to ${{ steps.release.outputs.version }}
@@ -86,4 +86,5 @@ jobs:
 
             Release: ${{ steps.release.outputs.url }}
 
-            Both macOS packages are present. SHA256 values come from the release's SHA256SUMS file; DMG files are not downloaded by this workflow.
+            - Both macOS arm64/amd64 packages are present.
+            - SHA256 values come from the release's SHA256SUMS file.

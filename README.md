@@ -2,4 +2,4 @@
 
 ## Casks
 
-- [factr](https://github.com/lilvadim/factr/releases/latest)
+- [factr](https://github.com/lilvadim/factr)
