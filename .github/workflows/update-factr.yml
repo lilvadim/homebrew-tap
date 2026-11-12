@@ -1,0 +1,89 @@
+name: Update Factr Cask
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-factr-cask
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Update Cask from Release Checksums
+        id: release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const { data: release } = await github.rest.repos.getLatestRelease({
+              owner: 'lilvadim',
+              repo: 'factr',
+            });
+            const match = /^v(\d+\.\d+\.\d+)$/.exec(release.tag_name);
+            if (!match || release.draft || release.prerelease) {
+              throw new Error('Expected a published stable release tagged vX.Y.Z');
+            }
+            const version = match[1];
+            const filenames = ['arm64', 'amd64'].map(arch => `Factr_${version}_macos-${arch}.dmg`);
+            const assets = new Map(release.assets.map(asset => [asset.name, asset]));
+            for (const name of ['SHA256SUMS', ...filenames]) {
+              if (!assets.has(name)) throw new Error(`Release is missing ${name}`);
+            }
+            const response = await fetch(assets.get('SHA256SUMS').browser_download_url);
+            if (!response.ok) throw new Error(`Failed to download SHA256SUMS: ${response.status}`);
+            const checksums = new Map();
+            for (const line of (await response.text()).trim().split(/\r?\n/)) {
+              const entry = /^([a-f0-9]{64}) [ *](.+)$/i.exec(line);
+              if (!entry) throw new Error('Invalid SHA256SUMS entry');
+              if (checksums.has(entry[2])) throw new Error(`Duplicate checksum for ${entry[2]}`);
+              checksums.set(entry[2], entry[1].toLowerCase());
+            }
+            const [arm, intel] = filenames.map(name => {
+              if (!checksums.has(name)) throw new Error(`Missing checksum for ${name}`);
+              return checksums.get(name);
+            });
+            const cask = `cask "factr" do
+              arch arm: "arm64", intel: "amd64"
+
+              version "${version}"
+              sha256 arm:   "${arm}",
+                     intel: "${intel}"
+
+              url "https://github.com/lilvadim/factr/releases/download/v#{version}/Factr_#{version}_macos-#{arch}.dmg"
+              name "Factr"
+              desc "Two-factor authenticator"
+              homepage "https://github.com/lilvadim/factr"
+
+              depends_on macos: :big_sur
+
+              app "Factr.app"
+            end
+            `;
+            fs.writeFileSync('Casks/factr.rb', cask);
+            core.setOutput('version', version);
+            core.setOutput('url', release.html_url);
+      - name: Check Ruby Syntax
+        run: ruby -c Casks/factr.rb
+      - name: Create Update Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: codex/update-factr-cask
+          base: ${{ github.event.repository.default_branch }}
+          add-paths: Casks/factr.rb
+          commit-message: Update Factr to ${{ steps.release.outputs.version }}
+          title: Update Factr to ${{ steps.release.outputs.version }}
+          body: |
+            Update Factr to ${{ steps.release.outputs.version }}.
+
+            Release: ${{ steps.release.outputs.url }}
+
+            Both macOS packages are present. SHA256 values come from the release's SHA256SUMS file; DMG files are not downloaded by this workflow.
