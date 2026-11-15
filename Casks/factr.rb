@@ -1,9 +1,9 @@
 cask "factr" do
   arch arm: "arm64", intel: "amd64"
 
-  version "1.1.2"
-  sha256 arm:   "3e1a4010c0cea0244459fb806be47b232b98cf6f75dcf1e2a01c534cf5418049",
-         intel: "3f2b8b66e7eccf7f85913f4dd89bf7836fc7cfc13bf35e84df816300a30e7f4d"
+  version "2.0.0"
+  sha256 arm:   "fe5aac4dafcd1e245dbe2c17e564c05f884385b2416f00ece89d55237700aca6",
+         intel: "3f6cf387aa1c8d7bcfcfe0ddac3bbae6b2cf9db624b20a6e1cef6f374e41542f"
 
   url "https://github.com/lilvadim/factr/releases/download/v#{version}/Factr_#{version}_macos-#{arch}.dmg"
   name "Factr"
